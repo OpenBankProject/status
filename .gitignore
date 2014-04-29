@@ -1,0 +1,6 @@
+*.db
+*.dat
+*.props
+target
+*.class
+*.log

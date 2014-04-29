@@ -1,0 +1,4 @@
+#RabbitMQ
+connection.host=FILL_ME
+connection.user=FILL_ME
+connection.password=FILL_ME
