@@ -33,32 +33,31 @@ import net.liftweb.common.Loggable
 import net.liftmodules.amqp.AMQPSender
 import com.rabbitmq.client.{ConnectionFactory, Channel}
 
-import com.tesobe.status.model.GetBanksStatues
+import com.tesobe.status.model.{GetBanksStatues, GetSupportedBanks}
 
 // allows the application to write messages in the message queue
 object MessageSender extends Loggable{
+  import net.liftmodules.amqp.AMQPMessage
 
-  val factory = new ConnectionFactory {
-    import ConnectionFactory._
-    setHost(Props.get("connection.host", "localhost"))
-    setPort(DEFAULT_AMQP_PORT)
-    setUsername(Props.get("connection.user", DEFAULT_USER))
-    setPassword(Props.get("connection.password", DEFAULT_PASS))
-    setVirtualHost(DEFAULT_VHOST)
-  }
-
-  val amqp = new SatutesRequestSender(factory, "getStatues", "statuesRequest")
+  val amqp = new MessageSender[GetBanksStatues](MQConnection.factory, "getStatues", "statuesRequest")
+  val amqp2 = new MessageSender[GetSupportedBanks](MQConnection.factory, "getBanks", "banksRequest")
 
   def getStatues = {
-    import net.liftmodules.amqp.AMQPMessage
+
     logger.info(s"sending message to get status")
     val m = GetBanksStatues()
     amqp ! AMQPMessage(m)
   }
+
+  def getBankList = {
+    logger.info(s"sending message to banks list")
+    val m = GetSupportedBanks()
+    amqp2 ! AMQPMessage(m)
+  }
 }
 
-class SatutesRequestSender(cf: ConnectionFactory, exchange: String, routingKey: String)
- extends AMQPSender[GetBanksStatues](cf, exchange, routingKey) {
+class MessageSender[T](cf: ConnectionFactory, exchange: String, routingKey: String)
+ extends AMQPSender[T](cf, exchange, routingKey) {
   override def configure(channel: Channel) = {
     val conn = cf.newConnection()
     val channel = conn.createChannel()
