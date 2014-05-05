@@ -55,3 +55,14 @@ case class BanksStatuesReply(
     statues.find(s => {s.country == country && s.id == id})
   }
 }
+
+case class DetailedBankStatus(
+  country: String,
+  id: String,
+  name: String,
+  tested: Boolean,
+  lastTest: Option[Date]
+)
+case class DetailedBankStatues(
+  statues: Set[DetailedBankStatus]
+)
