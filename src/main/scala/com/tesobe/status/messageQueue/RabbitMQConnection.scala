@@ -26,32 +26,19 @@ Berlin 13359, Germany
   Ayoub Benali: ayoub AT tesobe DOT com
 
  */
-package com.tesobe.status.model
+package com.tesobe.status.messageQueue
 
-import java.util.Date
 
-case class GetSupportedBanks
-case class SupportedBanksReply(
-  banks: Set[BankInfo]
-)
-case class BankInfo(
-  country: String,
-  nationalIdentifier: String,
-  name: String
-)
+object MQConnection {
+  import com.rabbitmq.client.ConnectionFactory
 
-case class GetBanksStatues
-case class BankStatus(
-  country: String,
-  id: String,
-  status: Boolean,
-  lastUpdate: Date
-)
-
-case class BanksStatuesReply(
-  statues: Set[BankStatus]
-){
-  def find(country: String, id: String): Option[BankStatus]= {
-    statues.find(s => {s.country == country && s.id == id})
+  lazy val factory = new ConnectionFactory {
+    import ConnectionFactory._
+    import net.liftweb.util.Props
+    setHost(Props.get("connection.host", "localhost"))
+    setPort(DEFAULT_AMQP_PORT)
+    setUsername(Props.get("connection.user", DEFAULT_USER))
+    setPassword(Props.get("connection.password", DEFAULT_PASS))
+    setVirtualHost(DEFAULT_VHOST)
   }
 }

@@ -30,9 +30,9 @@ Berlin 13359, Germany
 package com.tesobe.status.snippet
 
 import net.liftweb.common.Loggable
+//TODO: use comet actor to generate this page
 class Status extends Loggable{
   import net.liftweb.util.Helpers._
-  import net.liftweb.common.Full
   import scala.xml.NodeSeq
 
   def render(xhtml: NodeSeq) : NodeSeq = {
@@ -46,37 +46,94 @@ class Status extends Loggable{
     }
     import net.liftmodules.amqp.AMQPMessage
     import net.liftweb.http.S
+    import net.liftweb.common.{Box, Full, Empty}
+    import java.util.Date
 
-    import com.tesobe.status.model.BanksStatuesReply
+    import com.tesobe.status.model.{BanksStatuesReply, SupportedBanksReply}
 
+    case class DetailedBankStatus(
+      country: String,
+      id: String,
+      name: String,
+      tested: Boolean,
+      lastTest: Option[Date]
+    )
+    case class DetailedBankStatues(
+      statues: Set[DetailedBankStatus]
+    )
 
     lazy val NOOP_SELECTOR = "#i_am_an_id_that_should_never_exist" #> ""
 
     MessageSender.getStatues
+    MessageSender.getBankList
 
-    val response: LAFuture[BanksStatuesReply] = new LAFuture()
+    val banksStatues: LAFuture[DetailedBankStatues] = new LAFuture()
+
     // watingActor waits for acknowledgment if the bank account was added
     object bankStatuesListener extends LiftActor with Loggable{
+      private var bankStatues: Box[BanksStatuesReply] = Empty
+      private var supportedBanks: Box[SupportedBanksReply] = Empty
+
+      def completeFutureIfPossible(): Unit = {
+        if(bankStatues.isDefined && supportedBanks.isDefined){
+          val statues: Set[DetailedBankStatus] =
+            supportedBanks.get.banks.map{b => {
+              val isFound = bankStatues.get.find(b.country, b.nationalIdentifier)
+              val (status, lastUpdate) =
+                if(isFound.isDefined){
+                  (isFound.get.status, Some(isFound.get.lastUpdate))
+                }else{
+                  (false, None)
+                }
+              DetailedBankStatus(
+                b.country,
+                b.nationalIdentifier,
+                b.name,
+                status,
+                lastUpdate
+              )
+            }}
+          banksStatues.complete(Full(DetailedBankStatues(statues)))
+        }
+      }
+
       protected def messageHandler = {
         case msg@AMQPMessage(statues: BanksStatuesReply) => {
           logger.info("received bank statues message")
-          // complete the future
-          response.complete(Full(statues))
+          if(bankStatues.isEmpty){
+            bankStatues = Full(statues)
+            completeFutureIfPossible
+          }
+        }
+
+        case msg@AMQPMessage(banks: SupportedBanksReply) => {
+          logger.info("received supported banks message")
+          if(supportedBanks.isEmpty){
+            supportedBanks = Full(banks)
+            completeFutureIfPossible
+          }
+
         }
       }
     }
 
-    BankStatuesListener.subscribe(bankStatuesListener)
+    BankStatuesListener.subscribeForBanksStatues(bankStatuesListener)
+    BankStatuesListener.subscribeForBanksList(bankStatuesListener)
 
     //TODO: change that to be asynchronous
     val cssSelector =
-      response.get(5000) match {
+      banksStatues.get(5000) match {
         case Full(statuesReplay) =>{
           statuesReplay.statues.map(s =>{
             ".country *" #> s.country &
-            ".bankName *" #> s.id &
-            ".status *" #> s.status &
-            ".lastUpdate *" #> s.lastUpdate.toString
+            ".bankName *" #> s"${s.name} - ${s.id}" &
+            ".status *" #> s.tested &
+            ".lastUpdate *" #>{
+              s.lastTest match {
+                case Some(date) => date.toString
+                case _ => ""
+              }
+            }
           }).toList
         }
         case _ => {

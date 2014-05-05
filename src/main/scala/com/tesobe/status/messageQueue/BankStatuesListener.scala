@@ -51,21 +51,27 @@ class BankStatuesDispatcher[T](factory: ConnectionFactory)
   }
 }
 
-object BankStatuesListener extends Loggable{
-  import com.tesobe.status.model.BanksStatuesReply
+class BankListDispatcher[T](factory: ConnectionFactory)
+    extends AMQPDispatcher[T](factory) {
+  override def configure(channel: Channel) {
+    channel.exchangeDeclare("banksListResponse", "direct", false)
+    channel.queueDeclare("banksList", false, false, false, null)
+    channel.queueBind ("banksList", "banksListResponse", "banksList")
+    channel.basicConsume("banksList", false, new SerializedConsumer(channel, this))
+  }
+}
 
-  lazy val factory = new ConnectionFactory {
-    import ConnectionFactory._
-    setHost(Props.get("connection.host", "localhost"))
-    setPort(DEFAULT_AMQP_PORT)
-    setUsername(Props.get("connection.user", DEFAULT_USER))
-    setPassword(Props.get("connection.password", DEFAULT_PASS))
-    setVirtualHost(DEFAULT_VHOST)
+object BankStatuesListener extends Loggable{
+  import com.tesobe.status.model.{BanksStatuesReply, SupportedBanksReply}
+
+  private val amqp1 = new BankStatuesDispatcher[BanksStatuesReply](MQConnection.factory)
+  private val amqp2 = new BankListDispatcher[SupportedBanksReply](MQConnection.factory)
+
+  def subscribeForBanksStatues(actor: LiftActor): Unit = {
+    amqp1 ! AMQPAddListener(actor)
   }
 
-  val amqp = new BankStatuesDispatcher[BanksStatuesReply](factory)
-
-  def subscribe(actor: LiftActor): Unit = {
-    amqp ! AMQPAddListener(actor)
+  def subscribeForBanksList(actor: LiftActor): Unit = {
+    amqp2 ! AMQPAddListener(actor)
   }
 }
