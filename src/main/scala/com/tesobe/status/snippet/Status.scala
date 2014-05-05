@@ -37,37 +37,28 @@ class Status extends Loggable{
   import scala.xml.NodeSeq
 
   def render(xhtml: NodeSeq) : NodeSeq = {
-    import com.tesobe.status.messageQueue.{
-      MessageSender,
-      BankStatuesListener,
-      BankStatuesHandler
-    }
     import net.liftweb.actor.{
       LAFuture,
-      LiftActor
+      LAScheduler
     }
-    import net.liftmodules.amqp.AMQPMessage
     import net.liftweb.http.S
-    import net.liftweb.common.{Box, Full, Empty}
+    import net.liftweb.common.Full
     import java.util.Date
 
-    import com.tesobe.status.model.{
-      BanksStatuesReply,
-      SupportedBanksReply,
-      DetailedBankStatues,
-      DetailedBankStatus
-    }
+    import com.tesobe.status.messageQueue.BankStatuesHandler
+    import com.tesobe.status.model.DetailedBankStatues
+    import com.tesobe.status.util.LiftHelper._
 
     lazy val NOOP_SELECTOR = "#i_am_an_id_that_should_never_exist" #> ""
 
     val banksStatues: LAFuture[DetailedBankStatues] = new LAFuture()
-
     val actor  = new BankStatuesHandler(banksStatues)
-    //TODO: change that to be asynchronous
-    val cssSelector =
-      banksStatues.get(5000) match {
-        case Full(statuesReplay) =>{
-          statuesReplay.statues.map(s =>{
+    val statues: LAFuture[NodeSeq] = new LAFuture()
+
+    def generateNodeSeq(f: LAFuture[NodeSeq]): Unit = {
+      banksStatues.foreach(reply => {
+        val nodeSeq: NodeSeq =
+          reply.statues.map(s =>{
             ".country *" #> s.country &
             ".bankName *" #> s"${s.name} - ${s.id}" &
             ".status *" #> s.tested &
@@ -77,15 +68,14 @@ class Status extends Loggable{
                 case _ => ""
               }
             }
-          }).toList
-        }
-        case _ => {
-          logger.warn("data storage time out.")
-          S.error("could not fetch the bank statues")
-          NOOP_SELECTOR :: Nil
-        }
-      }
+          }).toList.flatMap(_.apply(xhtml))
 
-    cssSelector.flatMap(_.apply(xhtml))
+        f.complete(Full(nodeSeq))
+      })
+    }
+
+    LAScheduler.execute( ()=> generateNodeSeq(statues))
+
+    ("#statues" #> statues).apply(xhtml)
   }
 }
