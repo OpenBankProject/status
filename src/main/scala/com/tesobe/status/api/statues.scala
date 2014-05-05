@@ -39,28 +39,22 @@ object Statues extends RestHelper with Loggable{
   import net.liftweb.actor.LAFuture
   import com.tesobe.status.messageQueue.BankStatuesHandler
   import net.liftweb.http.JsonResponse
+  import net.liftweb.http.rest.RestContinuation
 
   serve{
     case "data" :: Nil JsonGet json => {
-      val banksStatues: LAFuture[DetailedBankStatues] = new LAFuture()
-      val actor  = new BankStatuesHandler(banksStatues)
-
-
-      banksStatues.get(8000) match {
-        case Full(statuesReplay) =>{
-          val body= Extraction.decompose(statuesReplay)
-          JsonResponse(body, Nil, Nil, 200)
+      RestContinuation.async(
+        reply => {
+          val banksStatues: LAFuture[DetailedBankStatues] = new LAFuture()
+          val actor  = new BankStatuesHandler(banksStatues)
+          banksStatues.foreach{statuesReplay =>
+            reply{
+              val body= Extraction.decompose(statuesReplay)
+              JsonResponse(body, Nil, Nil, 200)
+            }
+          }
         }
-        case _ => {
-          logger.warn("future time out.")
-          case class Error(
-            error: String
-          )
-          val body = Extraction.decompose(Error("could not fetch the bank statues"))
-
-          JsonResponse(body, Nil, Nil, 500)
-        }
-      }
+      )
     }
   }
 }
