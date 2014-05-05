@@ -40,6 +40,8 @@ import net.liftweb.mapper._
 import net.liftweb.util._
 import net.liftweb.util.Helpers._
 
+import com.tesobe.status.api.Statues
+
 
 
 /**
@@ -146,6 +148,8 @@ class Boot extends Loggable{
     // where to search snippet
     LiftRules.addToPackages("com.tesobe.status")
 
+
+    LiftRules.statelessDispatchTable.append(Statues)
     LiftRules.ajaxStart =
       Full(() => LiftRules.jsArtifacts.show("ajax-loader").cmd)
 
