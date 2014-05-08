@@ -906,5 +906,8 @@ td.succeeded{
 
 td.pending{
   background-color: #FCEE4A
+}
 
+#bankData th{
+    cursor: pointer;
 }

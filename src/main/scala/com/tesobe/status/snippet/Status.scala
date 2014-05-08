@@ -57,11 +57,12 @@ class Status extends Loggable{
     
 
     val cssSelector =
-      banksStatues.get(5000) match {
+      banksStatues.get(10000) match {
         case Full(statuesReplay) =>{
           statuesReplay.statues.map(s =>{
             ".country *" #> s.country &
-            ".bankName *" #> s"${s.name} - ${s.id}" &
+            ".bankCode *" #> s.id &
+            ".bankName *" #> {s.name} & 
             ".status *" #> s.tested &
             {
               val cssClassName = 
