@@ -63,14 +63,21 @@ class Status extends Loggable{
             ".country *" #> s.country &
             ".bankCode *" #> s.id &
             ".bankName *" #> {s.name} & 
-            ".status *" #> s.tested &
             {
-              val cssClassName = 
+              val cssClassName =
                 if(s.tested)
                   "succeeded"
                 else
                   "pending"
               ".status [class+]" #> cssClassName
+            } &
+            {
+              val testResult = 
+                if(s.tested)
+                  "OK"
+                else
+                  "Pending"
+              ".status *" #> testResult
             } &
             ".lastUpdate *" #>{
               s.lastTest match {
