@@ -35,8 +35,9 @@ import net.liftweb.common.Loggable
 class Status extends Loggable{
   import net.liftweb.util.Helpers._
   import scala.xml.NodeSeq
+  import net.liftweb.util._
 
-  def render(xhtml: NodeSeq) : NodeSeq = {
+  def render : CssSel = {
     import net.liftweb.actor.{
       LAFuture,
       LAScheduler
@@ -47,18 +48,18 @@ class Status extends Loggable{
 
     import com.tesobe.status.messageQueue.BankStatuesHandler
     import com.tesobe.status.model.DetailedBankStatues
-    import com.tesobe.status.util.LiftHelper._
+    // import com.tesobe.status.util.LiftHelper._
 
     lazy val NOOP_SELECTOR = "#i_am_an_id_that_should_never_exist" #> ""
 
     val banksStatues: LAFuture[DetailedBankStatues] = new LAFuture()
     val actor  = new BankStatuesHandler(banksStatues)
-    val statues: LAFuture[NodeSeq] = new LAFuture()
+    
 
-    def generateNodeSeq(f: LAFuture[NodeSeq]): Unit = {
-      banksStatues.foreach(reply => {
-        val nodeSeq: NodeSeq =
-          reply.statues.map(s =>{
+    val cssSelector =
+      banksStatues.get(5000) match {
+        case Full(statuesReplay) =>{
+          statuesReplay.statues.map(s =>{
             ".country *" #> s.country &
             ".bankName *" #> s"${s.name} - ${s.id}" &
             ".status *" #> s.tested &
@@ -76,14 +77,15 @@ class Status extends Loggable{
                 case _ => ""
               }
             }
-          }).toList.flatMap(_.apply(xhtml))
+          }).toList
+        }
+        case _ => {
+          logger.warn("data storage time out.")
+          S.error("could not fetch the bank statues")
+          NOOP_SELECTOR :: Nil
+        }
+      }
 
-        f.complete(Full(nodeSeq))
-      })
-    }
-
-    LAScheduler.execute( ()=> generateNodeSeq(statues))
-
-    ("#statues" #> statues).apply(xhtml)
+    (".statues" #> cssSelector)
   }
 }
