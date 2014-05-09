@@ -38,21 +38,21 @@ import net.liftweb.http.js._
 import net.liftweb.util.CanBind
 import net.liftweb.http.js.JsCmds._
 import net.liftweb.util.Helpers._
-
-
-import xml.{Node, Elem, NodeSeq}
+import xml.{ Node, Elem, NodeSeq }
+import net.liftweb.util.CssSel
 
 /**
- * This could be part of Lift
- * @param la the LAFuture holding the NodeSeq to update the UI
- */
+* This could be part of Lift
+* @param la the LAFuture holding the NodeSeq to update the UI
+*/
 
-case class FutureIsHere(la: LAFuture[NodeSeq], id: String) extends JsCmd with Loggable {
+
+case class FutureIsHere(la: LAFuture[CssSel], id: String, ns: NodeSeq) extends JsCmd with Loggable {
 
   logger.debug(id)
 
   val updatePage: JsCmd = if (la.isSatisfied) {
-    Replace(id , la.get)
+    Replace(id, la.get(ns))
   } else {
     tryAgain()
   }
@@ -67,24 +67,24 @@ case class FutureIsHere(la: LAFuture[NodeSeq], id: String) extends JsCmd with Lo
 }
 
 object LiftHelper extends Loggable {
-  implicit def laFutureNSTransform: CanBind[LAFuture[NodeSeq]] = new CanBind[LAFuture[NodeSeq]] {
-    def apply(future: => LAFuture[NodeSeq])(ns: NodeSeq): Seq[NodeSeq] = {
+  implicit def laFutureNSTransformMichel: CanBind[LAFuture[CssSel]] = new CanBind[LAFuture[CssSel]] {
+    def apply(future: => LAFuture[CssSel])(ns: NodeSeq): Seq[NodeSeq] = {
       val elem: Option[Elem] = ns match {
         case e: Elem => Some(e)
         case nodeSeq if nodeSeq.length == 1 && nodeSeq(0).isInstanceOf[Elem] => Box.asA[Elem](nodeSeq(0))
         case nodeSeq => None
       }
 
-      val id: String = elem.map(_.attributes.filter(att => att.key == "id")).map{ meta =>
-        tryo(meta.value.text).getOrElse( nextFuncName )
-      } getOrElse{
+      val id: String = elem.map(_.attributes.filter(att => att.key == "id")).map { meta =>
+        tryo(meta.value.text).getOrElse(nextFuncName)
+      } getOrElse {
         ""
       }
 
       val ret: Option[NodeSeq] = ns.toList match {
         case head :: tail => {
-          elem.map{ e =>
-            e % ("id" -> id) ++ tail ++ Script(OnLoad( SHtml.ajaxInvoke( () => FutureIsHere( future, id ) ).exp.cmd ))
+          elem.map { e =>
+            e % ("id" -> id) ++ tail ++ Script(OnLoad(SHtml.ajaxInvoke(() => FutureIsHere(future, id, ns)).exp.cmd))
           }
         }
 

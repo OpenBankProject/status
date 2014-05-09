@@ -1,17 +1,19 @@
 <div data-lift="surround?with=default;at=content" id="Status">
 
-  <table >
+  <table id="bankData">
     <thead>
       <tr>
-        <th>Country</th>
-        <th>Bank name</th>
-        <th>Tested</th>
-        <th>Latest test</th>
+        <th data-sort="string">Country</th>
+        <th data-sort="string">Bank code</th>
+        <th data-sort="string">Bank name</th>
+        <th data-sort="string">Tested</th>
+        <th data-sort="string">Latest test</th>
       </tr>
     </thead>
-    <tbody class="lift:Status" id="statues">
-      <tr>
+    <tbody class="lift:Status">
+      <tr class="statues">
         <td class="country" > </td>
+        <td class="bankCode">  </td>
         <td class="bankName">  </td>
         <td class="status"> </td>
         <td class="lastUpdate"> </td>
