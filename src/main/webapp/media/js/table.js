@@ -1,10 +1,22 @@
 $(function() {
-	$("#bankData").stupidtable();
-
-	$("#bankData").bind('aftertablesort', function (event, data) {
-	    var th = $(this).find("th");
-	    th.find(".arrow").remove();
-	    var arrow = data.direction === "asc" ?  "↓" : "↑";
-	    th.eq(data.column).append('<span class="arrow">' + arrow +'</span>');
+	$("#bankData").tablesorter({
+		sortList: [[4,1],[2,0]],
+		headers: {
+	        0: {
+	            sorter: "text"
+	        },
+	        1: {
+	            sorter: "digit"
+	        },
+	        2: {
+	            sorter: "text"
+	        },
+	        3: {
+	            sorter: "text"
+	        },
+	        4: {
+	            sorter: "text"
+	        } 
+	    }
 	});
 });
