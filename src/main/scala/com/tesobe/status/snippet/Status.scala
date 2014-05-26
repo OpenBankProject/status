@@ -48,13 +48,12 @@ class Status extends Loggable{
 
     import com.tesobe.status.messageQueue.BankStatuesHandler
     import com.tesobe.status.model.DetailedBankStatues
-    // import com.tesobe.status.util.LiftHelper._
 
     lazy val NOOP_SELECTOR = "#i_am_an_id_that_should_never_exist" #> ""
 
     val banksStatues: LAFuture[DetailedBankStatues] = new LAFuture()
     val actor  = new BankStatuesHandler(banksStatues)
-    
+
 
     val cssSelector =
       banksStatues.get(10000) match {
@@ -62,7 +61,7 @@ class Status extends Loggable{
           statuesReplay.statues.map(s =>{
             ".country *" #> s.country &
             ".bankCode *" #> s.id &
-            ".bankName *" #> {s.name} & 
+            ".bankName *" #> {s.name} &
             {
               val cssClassName =
                 if(s.tested)
@@ -72,7 +71,7 @@ class Status extends Loggable{
               ".status [class+]" #> cssClassName
             } &
             {
-              val testResult = 
+              val testResult =
                 if(s.tested)
                   "OK"
                 else
